@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OuroborBot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="brand">
+                <span class="brand-name">OuroborBot</span>
+                <span class="brand-divider"></span>
+                <span class="brand-sub">Snake Algorithm Comparison</span>
+            </div>
+            <span class="course-tag">COMP5700 &mdash; Classical AI</span>
+        </div>
+    </header>
+
+    <main class="main">
+
+        <!-- Arena -->
+        <div class="arena">
+
+            <!-- Panel 1 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="player-tag tag-blue">P1</span>
+                        Player 1
+                    </div>
+                    <span class="status-badge" id="status-1">Idle</span>
+                </div>
+
+                <div class="canvas-wrap">
+                    <canvas id="canvas-1" width="400" height="400"></canvas>
+                    <div class="death-screen" id="death-overlay-1">
+                        <span class="death-label">Game Over</span>
+                        <span class="death-cause" id="death-cause-1"></span>
+                    </div>
+                </div>
+
+                <div class="panel-footer">
+                    <label class="input-label" for="algo-1">Algorithm</label>
+                    <div class="select-wrap">
+                        <select id="algo-1" class="select">
+                            {% for algo in algorithms %}
+                            <option value="{{ algo }}">{{ algo | capitalize }}</option>
+                            {% else %}
+                            <option value="random">Random</option>
+                            <option value="bfs">BFS</option>
+                            <option value="dfs">DFS</option>
+                            <option value="astar">A*</option>
+                            <option value="csp">CSP</option>
+                            {% endfor %}
+                        </select>
+                        <svg class="chevron" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VS -->
+            <div class="vs-col">
+                <span class="vs-label">VS</span>
+            </div>
+
+            <!-- Panel 2 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="player-tag tag-orange">P2</span>
+                        Player 2
+                    </div>
+                    <span class="status-badge" id="status-2">Idle</span>
+                </div>
+
+                <div class="canvas-wrap">
+                    <canvas id="canvas-2" width="400" height="400"></canvas>
+                    <div class="death-screen" id="death-overlay-2">
+                        <span class="death-label">Game Over</span>
+                        <span class="death-cause" id="death-cause-2"></span>
+                    </div>
+                </div>
+
+                <div class="panel-footer">
+                    <label class="input-label" for="algo-2">Algorithm</label>
+                    <div class="select-wrap">
+                        <select id="algo-2" class="select">
+                            {% for algo in algorithms %}
+                            <option value="{{ algo }}"
+                                {% if loop.index == 2 %}selected{% endif %}>
+                                {{ algo | capitalize }}
+                            </option>
+                            {% else %}
+                            <option value="random">Random</option>
+                            <option value="bfs" selected>BFS</option>
+                            <option value="dfs">DFS</option>
+                            <option value="astar">A*</option>
+                            <option value="csp">CSP</option>
+                            {% endfor %}
+                        </select>
+                        <svg class="chevron" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="btn-start" class="btn btn-primary">&#9654; Start</button>
+            <button id="btn-stop"  class="btn btn-danger"  disabled>&#9632; Stop</button>
+            <button id="btn-reset" class="btn btn-default" disabled>&#8635; Reset</button>
+            <div class="speed-group">
+                <label class="input-label" for="tick-rate">Speed</label>
+                <div class="select-wrap">
+                    <select id="tick-rate" class="select select-sm">
+                        <option value="5">Slow</option>
+                        <option value="10" selected>Normal</option>
+                        <option value="20">Fast</option>
+                        <option value="60">Turbo</option>
+                    </select>
+                    <svg class="chevron" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <section class="stats-section">
+            <div class="section-header">
+                <h2 class="section-title">Statistics</h2>
+            </div>
+
+            <div class="stats-grid">
+
+                <!-- Player 1 stats -->
+                <div class="stat-card stat-card-blue">
+                    <div class="stat-card-head">
+                        <span class="stat-card-title">Player 1</span>
+                        <span class="algo-tag" id="algo-badge-1">—</span>
+                    </div>
+                    <table class="stat-table">
+                        <tbody>
+                            <tr><td class="sk">Score</td><td class="sv" id="s1-score">0</td></tr>
+                            <tr><td class="sk">Length</td><td class="sv" id="s1-length">3</td></tr>
+                            <tr><td class="sk">Steps</td><td class="sv" id="s1-steps">0</td></tr>
+                            <tr class="tr-divider"><td colspan="2"></td></tr>
+                            <tr><td class="sk">Best Score</td><td class="sv sv-hi" id="s1-best-score">0</td></tr>
+                            <tr><td class="sk">Best Length</td><td class="sv sv-hi" id="s1-best-length">3</td></tr>
+                            <tr><td class="sk">Avg Score</td><td class="sv" id="s1-avg-score">0.00</td></tr>
+                            <tr><td class="sk">Games</td><td class="sv" id="s1-games">1</td></tr>
+                            <tr class="tr-divider"><td colspan="2"></td></tr>
+                            <tr><td class="sk">Wall Deaths</td><td class="sv sv-bad" id="s1-wall">0</td></tr>
+                            <tr><td class="sk">Self Deaths</td><td class="sv sv-bad" id="s1-self">0</td></tr>
+                            <tr><td class="sk">Starvations</td><td class="sv sv-bad" id="s1-starve">0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Head to head -->
+                <div class="stat-card compare-card">
+                    <div class="stat-card-head">
+                        <span class="stat-card-title">Head to Head</span>
+                    </div>
+                    <table class="compare-table">
+                        <thead>
+                            <tr>
+                                <th>P1</th>
+                                <th></th>
+                                <th>P2</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="cv" id="cmp-score-1">0</td>
+                                <td class="ck">Best Score</td>
+                                <td class="cv" id="cmp-score-2">0</td>
+                            </tr>
+                            <tr>
+                                <td class="cv" id="cmp-len-1">3</td>
+                                <td class="ck">Best Length</td>
+                                <td class="cv" id="cmp-len-2">3</td>
+                            </tr>
+                            <tr>
+                                <td class="cv" id="cmp-avg-1">0.00</td>
+                                <td class="ck">Avg Score</td>
+                                <td class="cv" id="cmp-avg-2">0.00</td>
+                            </tr>
+                            <tr>
+                                <td class="cv" id="cmp-games-1">1</td>
+                                <td class="ck">Games</td>
+                                <td class="cv" id="cmp-games-2">1</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="bar-wrap">
+                        <span class="bar-label">Score Lead</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" id="compare-bar"></div>
+                        </div>
+                        <div class="bar-legend">
+                            <span>P1</span><span>P2</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Player 2 stats -->
+                <div class="stat-card stat-card-orange">
+                    <div class="stat-card-head">
+                        <span class="stat-card-title">Player 2</span>
+                        <span class="algo-tag" id="algo-badge-2">—</span>
+                    </div>
+                    <table class="stat-table">
+                        <tbody>
+                            <tr><td class="sk">Score</td><td class="sv" id="s2-score">0</td></tr>
+                            <tr><td class="sk">Length</td><td class="sv" id="s2-length">3</td></tr>
+                            <tr><td class="sk">Steps</td><td class="sv" id="s2-steps">0</td></tr>
+                            <tr class="tr-divider"><td colspan="2"></td></tr>
+                            <tr><td class="sk">Best Score</td><td class="sv sv-hi" id="s2-best-score">0</td></tr>
+                            <tr><td class="sk">Best Length</td><td class="sv sv-hi" id="s2-best-length">3</td></tr>
+                            <tr><td class="sk">Avg Score</td><td class="sv" id="s2-avg-score">0.00</td></tr>
+                            <tr><td class="sk">Games</td><td class="sv" id="s2-games">1</td></tr>
+                            <tr class="tr-divider"><td colspan="2"></td></tr>
+                            <tr><td class="sk">Wall Deaths</td><td class="sv sv-bad" id="s2-wall">0</td></tr>
+                            <tr><td class="sk">Self Deaths</td><td class="sv sv-bad" id="s2-self">0</td></tr>
+                            <tr><td class="sk">Starvations</td><td class="sv sv-bad" id="s2-starve">0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        OuroborBot &mdash; Ian MacDougall
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+</body>
+</html>
